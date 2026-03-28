@@ -1,0 +1,33 @@
+{
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.3.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.3.3"
+  },
+  "name": "job-board-platform-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  },
+  "scripts": {
+    "dev": "nodemon src/app.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Barok-y/Job-board-platform-backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/Barok-y/Job-board-platform-backend/issues"
+  },
+  "homepage": "https://github.com/Barok-y/Job-board-platform-backend#readme"
+}
