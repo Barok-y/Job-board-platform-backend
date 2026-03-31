@@ -1,0 +1,26 @@
+{
+  "name": "job-board-platform-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Barok-y/Job-board-platform-backend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Barok-y/Job-board-platform-backend/issues"
+  },
+  "homepage": "https://github.com/Barok-y/Job-board-platform-backend#readme",
+  "dependencies": {
+    "express": "^5.2.1",
+    "mongoose": "^9.3.3"
+  }
+}
