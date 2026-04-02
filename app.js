@@ -16,7 +16,7 @@ app.use(express.json());
 app.use("/api/auth", apiLimiter);
 
 app.use("/api/auth", authRouter);
+app.use("/api/applications", appRouter);
     // Other routes
-
 
 export default app;
