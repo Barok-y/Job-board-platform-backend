@@ -84,7 +84,7 @@ export const login = async (req, res) => {
 
     // Email normalization
     const emailNormalized = email.toLowerCase();
-    const user = await User.findOne({ email: emailNormalized });
+    const user = await User.findOne({ email: emailNormalized }).select("+password");
     const validPassword = await bcrypt.compare(password, user.password);
 
     if (!user || !validPassword) {
@@ -122,9 +122,10 @@ export const login = async (req, res) => {
         role: user.role,
       },
     });
-  } catch (err) {
+    } catch (err) {
+    console.error("LOGIN ERROR:", err.message);
     return res.status(500).json({
-      error: "Internal server error.", // No guidline put on error messages
+      error: err.message,
     });
   }
 };
