@@ -19,7 +19,6 @@ if (process.env.NODE_ENV !== "test") {
 
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
-app.use(mongoSanitize());
 app.use("/api", apiLimiter);
 
 app.get("/health", (req, res) => res.status(200).json({ status: "ok", timestamp: new Date().toISOString() }));
