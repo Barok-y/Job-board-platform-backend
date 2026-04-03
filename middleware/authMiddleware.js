@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 const authMiddleware = (req, res, next) =>{
     try{
         const authHeader = req.headers.authorization;
-        if(!authHeader){
+        if(!authHeader || !authHeader.startsWith("Bearer ")){
             return res.status(401).json({
                 error: "No token provided."
             });
@@ -22,7 +22,7 @@ const authMiddleware = (req, res, next) =>{
 
         next();
     }catch(err){
-        return res.status(401).json({
+        return res.status(403).json({
             error: "Unauthorized."
         })
     }

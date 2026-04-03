@@ -2,6 +2,7 @@ import User from "../models/User.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import RefreshToken from "../models/refreshTokenModel.js";
+import { generateAccessToken, generateRefreshToken } from "../utils/tokenService.js";
 
 export const register = async (req, res) => {
   try {
@@ -9,9 +10,9 @@ export const register = async (req, res) => {
     const role = "job_seeker";
 
     if (!name || !email || !password) {
-      return res
-        .status(400)
-        .json({ error: "Name, email and password are required." });
+      return res.status(400).json({
+        error: "Name, email and password are required."
+      });
     }
     if (password.length < 8) {
       return res.status(400).json({ 
@@ -29,30 +30,29 @@ export const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = await User.create({
       name,
-      email,
+      email: emailNormalized,
       password: hashedPassword,
       role,
     });
 
-    const access_token = jwt.sign(
-      { id: newUser._id, role: newUser.role },
-      process.env.JWT_ACCESS_SECRET,
-      {
-        expiresIn: process.env.ACCESS_TOKEN_EXPIRE_DATE,
-      }
-    );
+    const access_token = generateAccessToken(newUser);
+    const refresh_token = generateRefreshToken(newUser);
+    const hashed_token = await bcrypt.hash(refresh_token, 10);
 
-    const refresh_token = jwt.sign(
-      { id: newUser._id, role: newUser.role },
-      process.env.JWT_REFRESH_SECRET,
-      {
-        expiresIn: process.env.REFRESH_TOKEN_EXPIRE_DATE,
-      }
-    );
+    let expires_at = new Date();
+    expires_at.setDate(expires_at.getDate() + 90);
 
     await RefreshToken.create({
-      refresh_token: refresh_token,
+      refresh_token: hashed_token,
       user_id: newUser._id,
+      expiresAt: expires_at,
+    });
+
+    res.cookie("refresh_token", refresh_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: "lax",
+      maxAge: 90 * 24 * 60 * 60000
     });
 
     return res.status(201).json({
@@ -64,11 +64,10 @@ export const register = async (req, res) => {
         role: newUser.role,
       },
       access_token: access_token,
-      refresh_token: refresh_token,
     });
   } catch (err) {
     return res.status(500).json({
-      error: err.message, // No guidline put on error messages
+      error: "Internal server error.",
     });
   }
 };
@@ -85,38 +84,44 @@ export const login = async (req, res) => {
     // Email normalization
     const emailNormalized = email.toLowerCase();
     const user = await User.findOne({ email: emailNormalized });
-    const validPassword = await bcrypt.compare(password, user.password);
-
-    if (!user || !validPassword) {
+    if (!user) {
       return res.status(401).json({
         error: "Invalid credentials."
       });
     }
 
-    const access_token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_ACCESS_SECRET,
-      {
-        expiresIn: process.env.ACCESS_TOKEN_EXPIRE_DATE,
-      }
+    const validPassword = await bcrypt.compare(password, user.password);
+
+    if (!validPassword) {
+      return res.status(401).json({
+        error: "Invalid credentials."
+      });
+    }
+
+    const access_token = generateAccessToken(user);
+    const refresh_token = generateRefreshToken(user);
+    const hashed_token = await bcrypt.hash(refresh_token, 10);
+
+    let expires_at = new Date();
+    expires_at.setDate(expires_at.getDate() + 90);
+
+    await RefreshToken.findOneAndUpdate(
+      {user_id: user._id,},
+      { refresh_token: hashed_token,
+        expiresAt: expires_at
+      },
+      {upsert: true, new: true}
     );
 
-    const refresh_token = jwt.sign(
-      { id: user._id, role: user.role },
-      process.env.JWT_REFRESH_SECRET,
-      {
-        expiresIn: process.env.REFRESH_TOKEN_EXPIRE_DATE,
-      }
-    );
-
-    await RefreshToken.create({
-      refresh_token: refresh_token,
-      user_id: user._id,
+    res.cookie("refresh_token", refresh_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: "lax",
+      maxAge: 90 * 24 * 60 * 60000
     });
 
     return res.status(200).json({
       access_token: access_token,
-      refresh_token: refresh_token,
       user: {
         id: user._id,
         role: user.role,
@@ -124,56 +129,110 @@ export const login = async (req, res) => {
     });
   } catch (err) {
     return res.status(500).json({
-      error: "Internal server error.", // No guidline put on error messages
+      error: "Internal server error.",
     });
   }
 };
 
 export const logout = async (req, res) => {
-  try {
-    const { refresh_token } = req.body;
-    if (!refresh_token) {
-      return res.status(400).json({
-        error: "Refresh token is required.",
-      });
+    const refresh_token = req.cookies.refresh_token;
+    
+    res.clearCookie("refresh_token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: "lax"
+    });
+
+    if (refresh_token) {
+      try{
+        const decoded = jwt.verify(refresh_token, process.env.JWT_REFRESH_SECRET);
+        await RefreshToken.deleteOne({ user_id: decoded.id, });
+      }catch(err){
+          console.log("Logout token verification/deletion failed: ", err.message);
+      }
     }
-    await RefreshToken.deleteOne({ refresh_token: refresh_token });
 
     return res.status(200).json({
-      message: "Logged out successfully",
+      message: "Logged out successfully.",
     });
-  } catch (err) {
-    return res.status(500).json({
-      error: "Internal server error."
-    });
-  }
 };
 
 export const refreshToken = async (req, res) => {
   try {
-    const { refresh_token } = req.body;
+    const refresh_token = req.cookies.refresh_token;
     if (!refresh_token) {
       return res.status(401).json({
         error: "Refresh token missing.",
       });
     }
 
-    const storedToken = await RefreshToken.findOne({ refresh_token: refresh_token });
-    if (!storedToken) {
+    let decoded;
+    try{
+      decoded = jwt.verify(refresh_token, process.env.JWT_REFRESH_SECRET);
+    }catch(err){
       return res.status(403).json({
-        error: "Invalid refresh token.",
+        error: "Invalid refresh token."
       });
     }
 
-    const decoded = jwt.verify(refresh_token, process.env.JWT_REFRESH_SECRET);
+    const user = await User.findById(decoded.id);
+    if(!user){
+      return res.status(403).json({
+        error: "Invalid refresh token."
+      });
+    }
+    
+    const token = await RefreshToken.findOne({ user_id: decoded.id});
+    if(!token){
+      return res.status(403).json({
+        error: "Invalid refresh token."
+      });
+    }
+    if (token.expiresAt < new Date()) {
+      await RefreshToken.deleteOne({ user_id: decoded.id});
+      res.clearCookie("refresh_token", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: "lax"
+      });
 
-    const newAccess_token = jwt.sign(
-      { id: decoded.id, role: decoded.role },
-      process.env.JWT_ACCESS_SECRET,
-      {
-        expiresIn: process.env.ACCESS_TOKEN_EXPIRE_DATE,
+      return res.status(403).json({
+        error: "Refresh token expired."
+      });
+    }
+    
+    const isMatching = await bcrypt.compare(refresh_token, token.refresh_token);
+    if (!isMatching) {
+      await RefreshToken.deleteOne({ user_id: decoded.id});
+      res.clearCookie("refresh_token", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: "lax"
+      });
+
+      return res.status(403).json({
+        error: "Invalid refresh token."
+      });
+    }
+
+    const newAccess_token = generateAccessToken(user);
+    const newRefresh_token = generateRefreshToken(user);
+    const hashed_token = await bcrypt.hash(newRefresh_token,10);
+
+    let expires_at = new Date();
+    expires_at.setDate(expires_at.getDate() + 90);
+    await RefreshToken.findOneAndUpdate(
+      { user_id: user._id},
+      { refresh_token: hashed_token,
+        expiresAt: expires_at,
       }
     );
+    res.cookie("refresh_token", newRefresh_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: "lax",
+      maxAge: 90 * 24 * 60 * 60000
+    });
 
     return res.json({ access_token: newAccess_token });
   } catch (err) {
