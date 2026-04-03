@@ -1,10 +1,10 @@
 const express = require("express");
 const cors = require("cors");
 const helmet = require("helmet");
-const mongoSanitize = require("express-mongo-sanitize");
 const morgan = require("morgan");
+const cookieParser = require("cookie-parser");
 
-const { apiLimiter } = require("./middleware/rateLimiter");
+const { apiLimiter, authLimiter } = require("./middleware/rateLimiter");
 const { globalErrorHandler, AppError } = require("./middleware/errorMiddleware");
 const logger = require("./config/logger");
 
@@ -19,10 +19,10 @@ if (process.env.NODE_ENV !== "test") {
 
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
+app.use(cookieParser());
 app.use("/api", apiLimiter);
 
 app.get("/health", (req, res) => res.status(200).json({ status: "ok", timestamp: new Date().toISOString() }));
-
 
 // app.use("/api/auth",         require("./routes/authRoutes"));
 // app.use("/api/users",        require("./routes/userRoutes"));
