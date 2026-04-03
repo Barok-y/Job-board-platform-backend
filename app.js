@@ -5,7 +5,7 @@ const mongoSanitize = require("express-mongo-sanitize");
 const morgan = require("morgan");
 
 const { apiLimiter } = require("./middleware/rateLimiter");
-const { globalErrorHandler, AppError } = require("./middleware/errorHandler");
+const { globalErrorHandler, AppError } = require("./middleware/errorMiddleware");
 const logger = require("./config/logger");
 
 const app = express();

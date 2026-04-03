@@ -7,10 +7,10 @@ const logger = require("./config/logger");
 const PORT = process.env.PORT || 5000;
 
 const startServer = async () => {
-  /*await connectDB();*/
+ 
 
   const server = app.listen(PORT, () => {
-    logger.info(`🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+    logger.info(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
   });
 
   const shutdown = (signal) => {
