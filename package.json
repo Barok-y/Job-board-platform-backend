@@ -1,22 +1,12 @@
 {
-  "dependencies": {
-    "bcrypt": "^6.0.0",
-    "dotenv": "^17.3.1",
-    "express": "^5.2.1",
-    "express-rate-limit": "^8.3.1",
-    "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.3.3"
-  },
   "name": "job-board-platform-backend",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
-  "devDependencies": {
-    "nodemon": "^3.1.14"
-  },
+  "main": "app.js",
   "scripts": {
-    "dev": "nodemon src/app.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "nodemon index.js",
+    "start": "node index.js"
   },
   "repository": {
     "type": "git",
@@ -29,5 +19,18 @@
   "bugs": {
     "url": "https://github.com/Barok-y/Job-board-platform-backend/issues"
   },
-  "homepage": "https://github.com/Barok-y/Job-board-platform-backend#readme"
+  "homepage": "https://github.com/Barok-y/Job-board-platform-backend#readme",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cookie-parser": "^1.4.7",
+    "dotenv": "^17.3.1",
+    "express": "^5.2.1",
+    "express-rate-limit": "^8.3.1",
+    "helmet": "^8.1.0",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.3.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
 }
