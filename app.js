@@ -1,35 +1,63 @@
-const express = require("express");
-const cors = require("cors");
-const helmet = require("helmet");
-const morgan = require("morgan");
-const cookieParser = require("cookie-parser");
+import express from "express";
+import cors from "cors";
+import helmet from "helmet";
+import morgan from "morgan";
+import cookieParser from "cookie-parser";
 
-const { apiLimiter, authLimiter } = require("./middleware/rateLimiter");
-const { globalErrorHandler, AppError } = require("./middleware/errorMiddleware");
-const logger = require("./config/logger");
+import authRouter from "./routes/authRoutes.js";
+import userRouter from "./routes/userRoutes.js";
+
+import { apiLimiter } from "./middleware/rateLimiter.js";
+import { globalErrorHandler, AppError } from "./middleware/errorMiddleware.js";
+import logger from "./config/logger.js";
 
 const app = express();
 
+// Security middleware
 app.use(helmet());
-app.use(cors({ origin: process.env.CLIENT_ORIGIN || "*", methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], allowedHeaders: ["Content-Type", "Authorization"] }));
+app.use(
+  cors({
+    origin: process.env.CLIENT_ORIGIN || "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
+// Logging
 if (process.env.NODE_ENV !== "test") {
-  app.use(morgan("combined", { stream: { write: (msg) => logger.http(msg.trim()) } }));
+  app.use(
+    morgan("combined", {
+      stream: { write: (msg) => logger.http(msg.trim()) },
+    })
+  );
 }
 
+// Body parsers
 app.use(express.json({ limit: "10kb" }));
 app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 app.use(cookieParser());
+
+// Rate limiting
 app.use("/api", apiLimiter);
 
-app.get("/health", (req, res) => res.status(200).json({ status: "ok", timestamp: new Date().toISOString() }));
+// Routes
+app.use("/api/auth", authRouter);
+app.use("/api/users", userRouter);
 
-// app.use("/api/auth",         require("./routes/authRoutes"));
-// app.use("/api/users",        require("./routes/userRoutes"));
-// app.use("/api/jobs",         require("./routes/jobRoutes"));
-// app.use("/api/applications", require("./routes/applicationRoutes"));
+// Health check
+app.get("/health", (req, res) =>
+  res.status(200).json({
+    status: "ok",
+    timestamp: new Date().toISOString(),
+  })
+);
 
-app.all("/{*any}", (req, res, next) => next(new AppError(`Route ${req.method} ${req.originalUrl} not found.`, 404)));
+// Not found handler
+app.all("/{*any}", (req, res, next) =>
+  next(new AppError(`Route ${req.method} ${req.originalUrl} not found.`, 404))
+);
+
+// Global error handler
 app.use(globalErrorHandler);
 
-module.exports = app;
+export default app;

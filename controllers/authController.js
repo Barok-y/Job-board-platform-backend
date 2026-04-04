@@ -83,7 +83,8 @@ export const login = async (req, res) => {
 
     // Email normalization
     const emailNormalized = email.toLowerCase();
-    const user = await User.findOne({ email: emailNormalized });
+    const user = await User.findOne({ email: emailNormalized }).select("+password");
+  
     if (!user) {
       return res.status(401).json({
         error: "Invalid credentials."
@@ -127,7 +128,8 @@ export const login = async (req, res) => {
         role: user.role,
       },
     });
-  } catch (err) {
+    } catch (err) {
+    console.error("LOGIN ERROR:", err.message);
     return res.status(500).json({
       error: "Internal server error.",
     });
