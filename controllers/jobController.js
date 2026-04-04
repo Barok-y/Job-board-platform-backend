@@ -1,8 +1,14 @@
-const Job = require('../models/job.js');
+import Job from "../models/job.js";
 
-exports.createJob = async (req, res, next) => {
+export const createJob = async (req, res) => {
   try {
     const { title, description, location, salary, company, requirements } = req.body;
+
+    if (!title || !description || !location || !salary || !company) {
+      return res.status(400).json({
+        error: "title, description, location, salary, and company are required",
+      });
+    }
     
     const job = new Job({
       title,
@@ -15,13 +21,34 @@ exports.createJob = async (req, res, next) => {
     });
 
     await job.save();
-    res.status(201).json({ message: "Job created successfully", job });
+    return res.status(201).json({ message: "Job created successfully", job });
   } catch (error) {
-    next(error);
+    return res.status(500).json({ error: "Internal server error." });
   }
 };
 
-exports.updateJob = async (req, res, next) => {
+export const getJobs = async (req, res) => {
+  try {
+    const jobs = await Job.find().sort({ createdAt: -1 });
+    return res.status(200).json({ count: jobs.length, jobs });
+  } catch (error) {
+    return res.status(500).json({ error: "Internal server error." });
+  }
+};
+
+export const getJobById = async (req, res) => {
+  try {
+    const job = await Job.findById(req.params.id);
+    if (!job) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+    return res.status(200).json({ job });
+  } catch (error) {
+    return res.status(500).json({ error: "Internal server error." });
+  }
+};
+
+export const updateJob = async (req, res) => {
   try {
     let job = await Job.findById(req.params.id);
 
@@ -32,14 +59,14 @@ exports.updateJob = async (req, res, next) => {
     }
 
     job = await Job.findByIdAndUpdate(req.params.id, req.body, { new: true });
-    res.status(200).json({ message: "Job updated", job });
+    return res.status(200).json({ message: "Job updated", job });
   } catch (error) {
-    next(error);
+    return res.status(500).json({ error: "Internal server error." });
   }
 };
 
 
-exports.deleteJob = async (req, res, next) => {
+export const deleteJob = async (req, res) => {
   try {
     const job = await Job.findById(req.params.id);
 
@@ -50,8 +77,8 @@ exports.deleteJob = async (req, res, next) => {
     }
 
     await job.deleteOne();
-    res.status(200).json({ message: "Job deleted successfully" });
+    return res.status(200).json({ message: "Job deleted successfully" });
   } catch (error) {
-    next(error);
+    return res.status(500).json({ error: "Internal server error." });
   }
 };

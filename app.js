@@ -5,6 +5,8 @@ import morgan from "morgan";
 import cookieParser from "cookie-parser";
 
 import authRouter from "./routes/authRoutes.js";
+import appRouter from "./routes/appRoutes.js";
+import jobRouter from "./routes/jobRoutes.js";
 import userRouter from "./routes/userRoutes.js";
 
 import { apiLimiter } from "./middleware/rateLimiter.js";
@@ -42,7 +44,18 @@ app.use("/api", apiLimiter);
 
 // Routes
 app.use("/api/auth", authRouter);
+app.use("/api/jobs", jobRouter);
+app.use("/api/applications", appRouter);
+
 app.use("/api/users", userRouter);
+
+// Root route
+app.get("/", (req, res) =>
+  res.status(200).json({
+    message: "Job Board API is running",
+    health: "/health",
+  })
+);
 
 // Health check
 app.get("/health", (req, res) =>
