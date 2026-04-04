@@ -1,6 +1,6 @@
 import express from 'express';
 import authMiddleware from '../middleware/authMiddleware.js';
-import authorizeRoles from '../middleware/authorizeRoles.js';
+import authorizeRoles from '../middleware/roleMiddleware.js';
 import { createApplication, getApplications, updateApplicationStatus } from '../controllers/appController.js';
 
 const router = express.Router();
