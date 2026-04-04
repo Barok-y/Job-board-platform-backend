@@ -1,6 +1,6 @@
-const logger = require("../config/logger");
+import logger from "../config/logger.js";
 
-class AppError extends Error {
+export class AppError extends Error {
   constructor(message, statusCode) {
     super(message);
     this.statusCode = statusCode;
@@ -21,7 +21,7 @@ const handleValidationError = (err) => {
 const handleJWTError = () => new AppError("Invalid token. Please log in again.", 401);
 const handleJWTExpiredError = () => new AppError("Token expired. Please log in again.", 401);
 
-const globalErrorHandler = (err, req, res, next) => {
+export const globalErrorHandler = (err, req, res, next) => {
   err.statusCode = err.statusCode || 500;
 
   if (process.env.NODE_ENV === "development") {
@@ -43,5 +43,3 @@ const globalErrorHandler = (err, req, res, next) => {
     }
   }
 };
-
-module.exports = { globalErrorHandler, AppError };

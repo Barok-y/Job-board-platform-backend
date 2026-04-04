@@ -1,49 +1,62 @@
 import Application from "../models/Application.js";
+import Job from "../models/job.js";
 
 export const createApplication = async (req, res) => {
-    try{
-        const {jobId, cvUrl} = req.body;
+  try {
+    const { jobId, cvUrl } = req.body;
 
-        // required validation
-        if(!jobId || !cvUrl){
-            return res.status(400).json({
-                error: "jobId and cvUrl are required fields",
-            });
-        }
-
-        // Role check: only job seekers can apply for  jobs
-        if(!req.user || req.user.role !== "jobseeker"){
-            return res.status(403).json({
-                error: "only job seekers can apply for jobs"
-            });
-        }
-
-        // create application with pending status
-        const application = await Application.create({
-            jobId,
-            applicantId: req.user.id,
-            cvUrl,
-            status: "pending",
-        })
-        res.status(201).json({
-            message: "application created successfully",
-            application,
-        });
-    }catch(err){
-
-        // duplicate key error from unique index(jobId + applicantId)
-        if(err.code === 11000){
-            return res.status(409).json({
-                error: "you have already applied for this job",
-            });
-        
-        }
-
-        return res.status(500).json({
-            error: "Internal server error",
-        })
+    if (!jobId || !cvUrl) {
+      return res.status(400).json({
+        error: "jobId and cvUrl are required fields",
+      });
     }
-}
+
+    if (!req.user || req.user.role !== "job_seeker") {
+      return res.status(403).json({
+        error: "Only job seekers can apply for jobs.",
+      });
+    }
+
+    const job = await Job.findById(jobId);
+    if (!job) {
+      return res.status(404).json({
+        error: "Job not found.",
+      });
+    }
+
+    const existingApplication = await Application.findOne({
+      jobId,
+      applicantId: req.user.id,
+    });
+    if (existingApplication) {
+      return res.status(409).json({
+        error: "You have already applied for this job.",
+      });
+    }
+
+    const application = await Application.create({
+      jobId,
+      applicantId: req.user.id,
+      cvUrl,
+      status: "pending",
+    });
+
+    return res.status(201).json({
+      message: "Application created successfully.",
+      application,
+    });
+  } catch (err) {
+    if (err.code === 11000) {
+      return res.status(409).json({
+        error: "You have already applied for this job.",
+      });
+    }
+
+    return res.status(500).json({
+      error: "Internal server error.",
+    });
+  }
+};
 
 
 export const getApplications = async (req, res) => {
@@ -66,15 +79,11 @@ export const getApplications = async (req, res) => {
     if (role === "job_seeker") {
       query = { applicantId: userId };
     } else if (role === "employer") {
+      const employerJobs = await Job.find({ employer: userId }).select("_id");
+      const employerJobIds = employerJobs.map((job) => job._id);
 
-      // Job ownership field is not finalized yet, so employer filtering is blocked for now.
-      return res.status(501).json({
-        error:
-          "Employer application listing is not ready yet. It depends on final job owner field definition in Job model.",
-      });
+      query = { jobId: { $in: employerJobIds } };
     } else if (role === "admin") {
-
-      // Optional role behavior: admin can view all applications
       query = {};
     } else {
       return res.status(403).json({
@@ -84,6 +93,8 @@ export const getApplications = async (req, res) => {
 
     const [data, total] = await Promise.all([
       Application.find(query)
+        .populate("jobId", "title company location employer")
+        .populate("applicantId", "name email role")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
@@ -108,7 +119,6 @@ export const updateApplicationStatus = async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    // Role check: only employer
     if (!req.user || req.user.role !== "employer") {
       return res.status(403).json({
         error: "Only employers can update application status.",
@@ -135,14 +145,25 @@ export const updateApplicationStatus = async (req, res) => {
       });
     }
 
-    // TODO: Replace this temporary response once Job owner field is finalized.
-    // Final logic should:
-    // 1) Find job by application.jobId
-    // 2) Compare job.ownerField with req.user.id
-    // 3) Only then update status
-    return res.status(501).json({
-      error:
-        "Status update is temporarily unavailable until Job owner field is finalized for ownership validation.",
+    const job = await Job.findById(application.jobId);
+    if (!job) {
+      return res.status(404).json({
+        error: "Job not found.",
+      });
+    }
+
+    if (job.employer.toString() !== req.user.id) {
+      return res.status(403).json({
+        error: "You are not authorized to update this application.",
+      });
+    }
+
+    application.status = status;
+    await application.save();
+
+    return res.status(200).json({
+      message: "Application status updated successfully.",
+      application,
     });
   } catch (err) {
     return res.status(500).json({

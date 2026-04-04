@@ -34,6 +34,83 @@ const userSchema = new mongoose.Schema(
       },
       default: "job_seeker",
     },
+    requestedRole: {
+      type: String,
+      enum: {
+        values: ["employer"],
+        message: "Only employer role requests are supported",
+      },
+    },
+    roleRequestStatus: {
+      type: String,
+      enum: {
+        values: ["none", "pending", "approved", "rejected"],
+        message: "Role request status must be none, pending, approved, or rejected",
+      },
+      default: "none",
+    },
+    roleRequestNote: {
+      type: String,
+      trim: true,
+      maxlength: [500, "Role request note cannot exceed 500 characters"],
+    },
+    employerRequest: {
+      companyName: {
+        type: String,
+        trim: true,
+      },
+      companyEmail: {
+        type: String,
+        trim: true,
+        lowercase: true,
+      },
+      companyWebsite: {
+        type: String,
+        trim: true,
+      },
+      businessRegistrationNumber: {
+        type: String,
+        trim: true,
+      },
+      country: {
+        type: String,
+        trim: true,
+      },
+      address: {
+        type: String,
+        trim: true,
+      },
+      phone: {
+        type: String,
+        trim: true,
+      },
+      requestReason: {
+        type: String,
+        trim: true,
+        maxlength: [1000, "Request reason cannot exceed 1000 characters"],
+      },
+      documentLinks: [
+        {
+          type: String,
+          trim: true,
+        },
+      ],
+      adminReviewNote: {
+        type: String,
+        trim: true,
+        maxlength: [1000, "Admin review note cannot exceed 1000 characters"],
+      },
+    },
+    roleRequestedAt: {
+      type: Date,
+    },
+    roleReviewedAt: {
+      type: Date,
+    },
+    roleReviewedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
   },
   {
     timestamps: true,
