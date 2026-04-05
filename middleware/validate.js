@@ -1,7 +1,7 @@
-const Joi = require("joi");
-const { AppError } = require("./errorHandler");
+import Joi from "joi";
+import { AppError } from "./errorHandler.js";
 
-const validate = (schema) => (req, res, next) => {
+export const validate = (schema) => (req, res, next) => {
   const { error } = schema.validate(req.body, { abortEarly: false, stripUnknown: true });
   if (error) {
     const message = error.details.map((d) => d.message).join("; ");
@@ -10,7 +10,7 @@ const validate = (schema) => (req, res, next) => {
   next();
 };
 
-const schemas = {
+export const schemas = {
   register: Joi.object({
     name: Joi.string().min(2).max(60).trim().required(),
     email: Joi.string().email().lowercase().trim().required(),
@@ -51,5 +51,3 @@ const schemas = {
     status: Joi.string().valid("pending", "accepted", "rejected").required(),
   }),
 };
-
-module.exports = { validate, schemas };
